@@ -27,6 +27,7 @@
     </div>
   </header>
 
+
   <!-- Home View -->
   <main class="container">
     <div id="home-view" class="view">
@@ -52,6 +53,22 @@
           </div>
         </div>
       </section>
+
+  <section id="filter-section">
+    <input type="text" id="search-input" placeholder="Zoek een token" />
+    <select id="market-cap-filter">
+      <option value="all">Alle marktkapitalisaties</option>
+      <option value="large">Large Cap</option>
+      <option value="medium">Mid Cap</option>
+      <option value="small">Small Cap</option>
+    </select>
+    <select id="sort-select">
+      <option value="name-asc">Naam A-Z</option>
+      <option value="name-desc">Naam Z-A</option>
+      <option value="price-asc">Prijs ↑</option>
+      <option value="price-desc">Prijs ↓</option>
+    </select>
+  </section>
 
       <!-- Tabel Filters -->
       <section class="table-controls">
