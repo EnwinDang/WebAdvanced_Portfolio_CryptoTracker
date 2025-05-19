@@ -1,18 +1,7 @@
-/**
- * Main application script for CryptoTracker SPA
- * 
- * This file implements the Single Page Application architecture with client-side routing
- * and handles all the main functionality including:
- * - Dynamic view rendering based on URL hash
- * - Data fetching from CoinGecko API
- * - Search, filter, and sort functionality
- * - Favorites management with localStorage
- * - Dark/light theme toggle with localStorage
- * - Chart rendering for cryptocurrency price history
- * 
- * Sources:
- * - CoinGecko API: https://www.coingecko.com/en/api/documentation
- * - Chart.js: https://www.chartjs.org/docs/latest/
+/* 
+ Bronnen:
+ - CoinGecko API: https://www.coingecko.com/en/api/documentation
+ - Chart.js: https://www.chartjs.org/docs/latest/
  */
 
 import { fetchCoinsList, fetchGlobalData, fetchCoinDetails, fetchCoinMarketChart } from './js/api.js';
