@@ -1,45 +1,45 @@
 /**
- * Utility functions for formatting and data handling
+ * Hulpfuncties voor formattering en gegevensverwerking
  */
 
-// Format currency values
+// Valuta waarden formatteren
 export function formatCurrency(value) {
-  if (value === null || value === undefined) return '$0.00';
+  if (value === null || value === undefined) return '€0,00';
   
-  // Handle different value ranges
+  // Verschillende waardebereiken afhandelen
   if (value >= 1e9) {
-    return `$${(value / 1e9).toFixed(2)}B`;
+    return `€${(value / 1e9).toFixed(2).replace('.', ',')}B`;
   } else if (value >= 1e6) {
-    return `$${(value / 1e6).toFixed(2)}M`;
+    return `€${(value / 1e6).toFixed(2).replace('.', ',')}M`;
   } else if (value >= 1e3) {
-    return `$${(value / 1e3).toFixed(2)}K`;
+    return `€${(value / 1e3).toFixed(2).replace('.', ',')}K`;
   } else if (value >= 1) {
-    return `$${value.toFixed(2)}`;
+    return `€${value.toFixed(2).replace('.', ',')}`;
   } else {
-    // For very small values, use more decimal places
-    return `$${value.toFixed(6)}`;
+    // Voor zeer kleine waarden, meer decimalen gebruiken
+    return `€${value.toFixed(6).replace('.', ',')}`;
   }
 }
 
-// Format percentage values
+// Percentagewaarden formatteren
 export function formatPercentage(value) {
-  if (value === null || value === undefined) return '0.00%';
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  if (value === null || value === undefined) return '0,00%';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2).replace('.', ',')}%`;
 }
 
-// Format supply values
+// Voorraadwaarden formatteren
 export function formatSupply(value, symbol) {
-  if (value === null || value === undefined) return 'N/A';
-  return `${value.toLocaleString()} ${symbol}`;
+  if (value === null || value === undefined) return 'N/B';
+  return `${value.toLocaleString('nl-NL')} ${symbol}`;
 }
 
-// Get color based on price change
+// Kleur krijgen op basis van prijsverandering
 export function getChangeColor(change) {
   if (change === null || change === undefined) return 'var(--text-color)';
   return change >= 0 ? 'var(--positive-color)' : 'var(--negative-color)';
 }
 
-// Debounce function for search input
+// Debounce functie voor zoekinvoer
 export function debounce(func, delay) {
   let timeout;
   return function(...args) {
@@ -48,19 +48,19 @@ export function debounce(func, delay) {
   };
 }
 
-// Format date for chart labels
+// Datum formatteren voor grafiek labels
 export function formatDate(timestamp) {
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString('nl-NL', { month: 'short', day: 'numeric' });
 }
 
-// Truncate text with ellipsis
+// Tekst afkappen met ellipsis
 export function truncateText(text, maxLength) {
   if (!text || text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 }
 
-// Parse URL parameters
+// URL-parameters analyseren
 export function getUrlParams() {
   const params = {};
   const hash = window.location.hash.substring(1);
@@ -78,7 +78,7 @@ export function getUrlParams() {
   return params;
 }
 
-// Generate random color for charts
+// Willekeurige kleur genereren voor grafieken
 export function getRandomColor() {
   const letters = '0123456789ABCDEF';
   let color = '#';

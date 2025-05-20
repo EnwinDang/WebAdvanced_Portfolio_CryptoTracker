@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CryptoTracker - Overzicht van Cryptocurrency</title>
+  <title>CryptoTracker - Cryptocurrency Marktgegevens</title>
   <link rel="stylesheet" href="src/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,23 +20,29 @@
         </a>
       </div>
       <div class="header-right">
-        <button id="theme-toggle" class="theme-toggle" aria-label="Wissel thema">
+        <nav class="main-nav">
+          <ul>
+            <li><a href="#" data-view="home" class="nav-link">Home</a></li>
+            <li><a href="#favorites" data-view="favorites" class="nav-link">Favorieten</a></li>
+          </ul>
+        </nav>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Thema wisselen">
           🌙
         </button>
       </div>
     </div>
   </header>
 
-
-  <!-- Home View -->
+  <!-- Main Content -->
   <main class="container">
+    <!-- Home View -->
     <div id="home-view" class="view">
-      <!-- Markt Overzicht -->
+      <!-- Market Overview -->
       <section class="market-overview">
         <h2>Marktoverzicht</h2>
         <div class="overview-cards">
           <div class="overview-card">
-            <div class="card-label">Totale Marktwaarde</div>
+            <div class="card-label">Totale Marktkapitalisatie</div>
             <div id="total-market-cap" class="card-value">€0,00</div>
           </div>
           <div class="overview-card">
@@ -48,20 +54,20 @@
             <div id="btc-dominance" class="card-value">0,00%</div>
           </div>
           <div class="overview-card">
-            <div class="card-label">Actieve Cryptomunten</div>
+            <div class="card-label">Actieve Cryptocurrencies</div>
             <div id="active-cryptocurrencies" class="card-value">0</div>
           </div>
         </div>
       </section>
 
-      <!-- Tabel Filters -->
+      <!-- Table Controls -->
       <section class="table-controls">
         <div class="search-container">
-          <input type="text" id="search-input" class="search-input" placeholder="Zoek een cryptomunt...">
+          <input type="text" id="search-input" class="search-input" placeholder="Zoek cryptocurrency...">
         </div>
         <div class="filter-container">
           <select id="filter-select" class="filter-select">
-            <option value="all">Alle munten</option>
+            <option value="all">Alle Munten</option>
             <option value="favorites">Favorieten</option>
             <option value="gainers">Stijgers</option>
             <option value="losers">Dalers</option>
@@ -69,8 +75,8 @@
         </div>
         <div class="sort-container">
           <select id="sort-select" class="sort-select">
-            <option value="market_cap_desc">Marktkap ↓</option>
-            <option value="market_cap_asc">Marktkap ↑</option>
+            <option value="market_cap_desc">Marktkapitalisatie ↓</option>
+            <option value="market_cap_asc">Marktkapitalisatie ↑</option>
             <option value="price_desc">Prijs ↓</option>
             <option value="price_asc">Prijs ↑</option>
             <option value="volume_desc">Volume ↓</option>
@@ -81,28 +87,29 @@
         </div>
       </section>
 
-      <!-- Tabel met Cryptomunten -->
+      <!-- Cryptocurrency Table -->
       <section class="table-container">
         <table class="crypto-table">
           <thead>
             <tr>
-              <th class="rank-col">#</th>
+              <th class="rank-col">Rang</th>
               <th class="name-col">Naam</th>
               <th class="price-col">Prijs</th>
-              <th class="change-col">24u</th>
-              <th class="market-cap-col">Marktkap</th>
+              <th class="change-col">24u Verandering</th>
+              <th class="market-cap-col">Marktkapitalisatie</th>
               <th class="volume-col">Volume</th>
             </tr>
           </thead>
           <tbody id="crypto-table-body">
+            <!-- Table rows will be dynamically inserted here -->
             <tr class="loading-row">
-              <td colspan="6" class="loading-message">Laden van data...</td>
+              <td colspan="6" class="loading-message">Cryptocurrency gegevens laden...</td>
             </tr>
           </tbody>
         </table>
       </section>
 
-      <!-- Paginering -->
+      <!-- Pagination -->
       <div class="pagination">
         <button id="prev-page" class="pagination-button" disabled>Vorige</button>
         <span id="page-info" class="page-info">Pagina 1 van 1</span>
@@ -110,27 +117,68 @@
       </div>
     </div>
 
-    <!-- Detailweergave per munt -->
+    <!-- Favorites View -->
+    <div id="favorites-view" class="view" style="display: none;">
+      <section class="section-header">
+        <h2>Jouw Favoriete Cryptocurrencies</h2>
+        <p class="section-description">Volg en monitor je favoriete cryptocurrencies op één plek.</p>
+      </section>
+
+      <!-- Favorites Table -->
+      <section class="table-container">
+        <table class="crypto-table">
+          <thead>
+            <tr>
+              <th class="rank-col">Rang</th>
+              <th class="name-col">Naam</th>
+              <th class="price-col">Prijs</th>
+              <th class="change-col">24u Verandering</th>
+              <th class="market-cap-col">Marktkapitalisatie</th>
+              <th class="volume-col">Volume</th>
+            </tr>
+          </thead>
+          <tbody id="favorites-table-body">
+            <!-- Favorite coins will be dynamically inserted here -->
+            <tr class="loading-row">
+              <td colspan="6" class="loading-message">Je favoriete cryptocurrencies laden...</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- No Favorites Message -->
+      <div id="no-favorites-message" class="no-favorites-message" style="display: none;">
+        <div class="message-content">
+          <h3>Nog Geen Favorieten</h3>
+          <p>Je hebt nog geen cryptocurrencies aan je favorietenlijst toegevoegd.</p>
+          <p>Klik op het ster-icoon (☆) naast een cryptocurrency om deze aan je favorieten toe te voegen.</p>
+          <a href="#" data-view="home" class="button">Bekijk Cryptocurrencies</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coin Detail View -->
     <div id="coin-detail-view" class="view" style="display: none;">
       <div class="back-button-container">
-        <button id="back-to-home" class="back-button">← Terug</button>
+        <button id="back-to-home" class="back-button">← Terug naar Lijst</button>
       </div>
-
+      
       <div class="coin-detail-container">
+        <!-- Coin Info -->
         <div class="coin-info">
           <div class="coin-header">
-            <img id="coin-logo" src="src/assets/placeholder.svg" alt="Logo" class="coin-logo">
+            <img id="coin-logo" src="src/assets/placeholder.svg" alt="Munt Logo" class="coin-logo">
             <h1 id="coin-name" class="coin-name">Laden...</h1>
           </div>
-
+          
           <div class="coin-price-container">
             <div id="coin-price" class="coin-price">€0,00</div>
             <div id="coin-change" class="coin-change">0,00%</div>
           </div>
-
+          
           <div class="coin-stats">
             <div class="stat-row">
-              <span class="stat-label">Marktkap</span>
+              <span class="stat-label">Marktkapitalisatie</span>
               <span id="market-cap" class="stat-value">€0,00</span>
             </div>
             <div class="stat-row">
@@ -139,16 +187,18 @@
             </div>
           </div>
         </div>
-
+        
+        <!-- Chart -->
         <div class="chart-container">
-          <h2>Prijsverloop</h2>
+          <h2>Prijsgeschiedenis</h2>
           <canvas id="price-chart"></canvas>
         </div>
-
+        
+        <!-- Overview -->
         <div class="overview-section">
-          <h2>Beschrijving</h2>
+          <h2>Overzicht</h2>
           <div id="overview" class="coin-description">
-            <p>Laden...</p>
+            <p>Muntinformatie laden...</p>
           </div>
         </div>
       </div>
@@ -158,11 +208,11 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>Gemaakt door Nguyen Dang, API door <a href="https://www.coingecko.com/en/api" target="_blank">CoinGecko</a></p>
+      <p>Gemaakt door Nguyen Dang, met gebruik van <a href="https://www.coingecko.com/en/api" target="_blank">CoinGecko API</a></p>
     </div>
   </footer>
 
   <!-- Scripts -->
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="src/js/main.js"></script>
 </body>
 </html>
