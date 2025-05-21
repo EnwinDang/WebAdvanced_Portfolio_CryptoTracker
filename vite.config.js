@@ -1,10 +1,15 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
-    port: 3000
+    proxy: {
+      // alle verzoeken naar /api/… worden doorgestuurd naar CoinGecko
+      '/api': {
+        target: 'https://api.coingecko.com',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api/, '/api/v3'),
+      },
+    },
   },
-  build: {
-    outDir: 'dist'
-  }
 });

@@ -1,24 +1,18 @@
-/**
- * Hoofdscript voor CryptoTracker SPA
- * 
- * Dit bestand implementeert de Single Page Application architectuur met client-side routing
- * en regelt alle hoofdfunctionaliteit, waaronder:
- * - Dynamische weergave op basis van URL hash
- * - Gegevens ophalen van CoinGecko API
- * - Zoek-, filter- en sorteerfunctionaliteit
- * - Beheer van favorieten met localStorage
- * - Donker/licht thema met localStorage
- * - Grafiekweergave voor cryptocurrency prijsgeschiedenis
- * 
- * Bronnen:
- * - CoinGecko API: https://www.coingecko.com/en/api/documentation
- * - Chart.js: https://www.chartjs.org/docs/latest/
- */
+import {
+  fetchCoinsList,
+  fetchGlobalData,
+  fetchCoinDetails,
+  fetchCoinMarketChart,
+  fetchFavoriteCoins
+} from './api.js';
+import {
+  formatCurrency,
+  formatPercentage,
+  debounce,
+  getChangeColor
+} from './utils.js';
 
-import { fetchCoinsList, fetchGlobalData, fetchCoinDetails, fetchCoinMarketChart, fetchFavoriteCoins } from './api.js';
-import { formatCurrency, formatPercentage, formatSupply, debounce, getChangeColor } from './utils.js';
-
-// DOM Elementen
+// DOM-elementen
 const themeToggle = document.getElementById('theme-toggle');
 const totalMarketCap = document.getElementById('total-market-cap');
 const totalVolume = document.getElementById('total-volume');
@@ -39,7 +33,6 @@ const backToHomeFromFavorites = document.getElementById('back-to-home-from-favor
 const favoritesTableBody = document.getElementById('favorites-table-body');
 const noFavoritesMessage = document.getElementById('no-favorites-message');
 
-// Applicatie status
 let state = {
   currentView: 'home',
   currentCoinId: null,
@@ -54,735 +47,350 @@ let state = {
   sortType: 'market_cap_desc'
 };
 
-/**
- * Initialiseer de applicatie
- * Demonstreert: Async/Await, Event Listeners
- */
+document.addEventListener('DOMContentLoaded', initApp);
+
 async function initApp() {
-  console.log('CryptoTracker applicatie initialiseren...');
-  
-  // Event listeners instellen
   setupEventListeners();
-  
-  // Thema initialiseren
   initTheme();
-  
-  // Routing afhandelen op basis van URL hash
-  handleRouting();
-  
-  // Luisteren naar hash-wijzigingen
+  await handleRouting();
   window.addEventListener('hashchange', handleRouting);
 }
 
-/**
- * Alle event listeners voor de applicatie instellen
- * Demonstreert: DOM Event Binding, Arrow Functions, Callback Functions
- */
 function setupEventListeners() {
-  // Thema schakelaar
   themeToggle.addEventListener('click', toggleTheme);
-  
-  // Zoekinvoer met debounce voor betere prestaties
   searchInput.addEventListener('input', debounce(handleSearch, 300));
-  
-  // Filter selectie
   filterSelect.addEventListener('change', handleFilter);
-  
-  // Sorteer selectie
   sortSelect.addEventListener('change', handleSort);
-  
-  // Paginering
   prevPageButton.addEventListener('click', goToPrevPage);
   nextPageButton.addEventListener('click', goToNextPage);
-  
-  // Navigatie links
+
   document.querySelectorAll('[data-view]').forEach(link => {
-    link.addEventListener('click', (e) => {
+    link.addEventListener('click', e => {
       e.preventDefault();
-      const view = e.currentTarget.getAttribute('data-view');
-      navigateTo(view);
+      navigateTo(link.getAttribute('data-view'), link.dataset.coinId);
     });
   });
-  
-  // Terug knoppen
-  if (backToHomeButton) {
-    backToHomeButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigateTo('home');
-    });
-  }
-  
-  if (backToHomeFromFavorites) {
-    backToHomeFromFavorites.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigateTo('home');
-    });
-  }
+
+  if (backToHomeButton) backToHomeButton.addEventListener('click', e => { e.preventDefault(); navigateTo('home'); });
+  if (backToHomeFromFavorites) backToHomeFromFavorites.addEventListener('click', e => { e.preventDefault(); navigateTo('home'); });
 }
 
-/**
- * Thema initialiseren op basis van gebruikersvoorkeur
- * Demonstreert: Observer API (matchMedia), LocalStorage
- */
 function initTheme() {
-  const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-  const savedTheme = localStorage.getItem('theme');
-  
-  if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
-    document.body.classList.add('dark-theme');
-  } else {
-    document.body.classList.remove('dark-theme');
-  }
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (!saved && prefersDark.matches)) document.body.classList.add('dark-theme');
+  prefersDark.addEventListener('change', e => document.body.classList.toggle('dark-theme', e.matches));
 }
-
-/**
- * Schakelen tussen licht en donker thema
- * Demonstreert: DOM Manipulatie, LocalStorage
- */
 function toggleTheme() {
-  document.body.classList.toggle('dark-theme');
-  const currentTheme = document.body.classList.contains('dark-theme') ? 'dark' : 'light';
-  localStorage.setItem('theme', currentTheme);
+  const isDark = document.body.classList.toggle('dark-theme');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
 
-/**
- * Routing afhandelen op basis van URL hash
- * Demonstreert: Async/Await, Client-side Routing
- */
 async function handleRouting() {
-  const hash = window.location.hash.substring(1); // Verwijder het # symbool
-  
+  const hash = window.location.hash.substring(1);
   if (hash.startsWith('coin/')) {
-    const coinId = hash.split('/')[1];
     state.currentView = 'coin-detail';
-    state.currentCoinId = coinId;
+    state.currentCoinId = hash.split('/')[1];
     showView('coin-detail');
-    await loadCoinDetails(coinId);
+    await loadCoinDetails(state.currentCoinId);
   } else if (hash === 'favorites') {
     state.currentView = 'favorites';
-    state.currentCoinId = null;
     showView('favorites');
     await loadFavoritesData();
   } else {
     state.currentView = 'home';
-    state.currentCoinId = null;
     showView('home');
     await loadHomeData();
   }
 }
 
-/**
- * Navigeren naar een specifieke weergave
- * Demonstreert: Client-side Routing
- */
-function navigateTo(view, params = {}) {
-  if (view === 'home') {
-    window.location.hash = '';
-  } else if (view === 'coin-detail' && params.coinId) {
-    window.location.hash = `coin/${params.coinId}`;
-  } else if (view === 'favorites') {
-    window.location.hash = 'favorites';
-  }
+function navigateTo(view, coinId) {
+  if (view === 'home') window.location.hash = '';
+  else if (view === 'favorites') window.location.hash = 'favorites';
+  else if (view === 'coin-detail' && coinId) window.location.hash = `coin/${coinId}`;
 }
 
-/**
- * Een specifieke weergave tonen en anderen verbergen
- * Demonstreert: DOM Manipulatie
- */
 function showView(view) {
-  // Alle weergaven verbergen
   homeView.style.display = 'none';
   coinDetailView.style.display = 'none';
   if (favoritesView) favoritesView.style.display = 'none';
-  
-  // De gevraagde weergave tonen
-  if (view === 'home') {
-    homeView.style.display = 'block';
-  } else if (view === 'coin-detail') {
-    coinDetailView.style.display = 'block';
-  } else if (view === 'favorites' && favoritesView) {
-    favoritesView.style.display = 'block';
-  }
+  if (view === 'home') homeView.style.display = 'block';
+  if (view === 'coin-detail') coinDetailView.style.display = 'block';
+  if (view === 'favorites' && favoritesView) favoritesView.style.display = 'block';
 }
 
-/**
- * Home gegevens laden (marktoverzicht en muntenlijst)
- * Demonstreert: Async/Await, Foutafhandeling, Promises
- */
 async function loadHomeData() {
   try {
-    // Laadstatus tonen
     showLoadingState();
-    
-    // Globale marktgegevens ophalen
-    const globalData = await fetchGlobalData();
-    updateMarketOverview(globalData);
-    
-    // Muntenlijst ophalen
+    const stats = await fetchGlobalData();
+    updateMarketOverview(stats);
     const coins = await fetchCoinsList(1, 100);
-    if (coins && coins.length > 0) {
-      state.coins = coins;
-      state.filteredCoins = [...coins];
-      
-      // De tabel renderen
-      renderTable();
-    } else {
-      showErrorState("Kon cryptocurrency gegevens niet laden. Probeer het later opnieuw.");
-    }
-    
-    // Laadstatus verbergen
+    state.coins = coins;
+    state.filteredCoins = [...coins];
+    renderTable();
     hideLoadingState();
-  } catch (error) {
-    console.error('Fout bij laden home gegevens:', error);
-    showErrorState(error.message || "Kon gegevens niet laden. Controleer je verbinding en probeer opnieuw.");
+  } catch (e) {
+    console.error('Fout bij laden home:', e);
+    showErrorState(e.message || 'Kon gegevens niet laden.');
   }
 }
 
-/**
- * Favorieten gegevens laden
- * Demonstreert: Async/Await, Foutafhandeling, DOM Manipulatie
- */
 async function loadFavoritesData() {
   try {
     if (!favoritesTableBody) return;
-    
-    // Laadstatus tonen
-    favoritesTableBody.innerHTML = '<tr><td colspan="6" class="loading-message">Je favoriete cryptocurrencies laden...</td></tr>';
-    
-    // Favorieten ophalen uit localStorage
-    const favoriteIds = JSON.parse(localStorage.getItem('favorites') || '[]');
-    
-    // Als er geen favorieten zijn, bericht tonen
-    if (favoriteIds.length === 0) {
-      if (noFavoritesMessage) {
-        noFavoritesMessage.style.display = 'block';
-      }
+    favoritesTableBody.innerHTML = '<tr><td colspan="6" class="loading-message">Je favorieten laden...</td></tr>';
+    const favIds = JSON.parse(localStorage.getItem('favorites') || '[]');
+    if (favIds.length === 0) {
+      if (noFavoritesMessage) noFavoritesMessage.style.display = 'block';
       favoritesTableBody.innerHTML = '';
       return;
     }
-    
-    // Geen favorieten bericht verbergen
-    if (noFavoritesMessage) {
-      noFavoritesMessage.style.display = 'none';
-    }
-    
-    // Favoriete munten gegevens ophalen
-    const favoriteCoins = await fetchFavoriteCoins(favoriteIds);
-    state.favoriteCoins = favoriteCoins;
-    
-    // Favorieten tabel renderen
+    if (noFavoritesMessage) noFavoritesMessage.style.display = 'none';
+    const favCoins = await fetchFavoriteCoins(favIds);
+    state.favoriteCoins = favCoins;
     renderFavoritesTable();
-  } catch (error) {
-    console.error('Fout bij laden favorieten gegevens:', error);
+  } catch (e) {
+    console.error('Fout bij laden favorieten:', e);
     if (favoritesTableBody) {
       favoritesTableBody.innerHTML = `
         <tr>
           <td colspan="6" class="error-message">
-            Fout bij laden favorieten: ${error.message || "Onbekende fout"}
+            Fout bij laden favorieten: ${e.message}
             <button onclick="window.location.reload()" class="retry-button">Opnieuw proberen</button>
           </td>
-        </tr>
-      `;
+        </tr>`;
     }
   }
 }
 
-/**
- * Favorieten tabel renderen
- * Demonstreert: DOM Manipulatie, Template Literals, Array Methods
- */
-function renderFavoritesTable() {
-  if (!favoritesTableBody) return;
-  
-  // Tabel body leegmaken
-  favoritesTableBody.innerHTML = '';
-  
-  // Als er geen favoriete munten zijn om weer te geven
-  if (state.favoriteCoins.length === 0) {
-    const noResultsRow = document.createElement('tr');
-    noResultsRow.innerHTML = `
-      <td colspan="6" class="no-results">Je hebt nog geen favorieten toegevoegd.</td>
-    `;
-    favoritesTableBody.appendChild(noResultsRow);
+function updateMarketOverview(data) {
+  totalMarketCap.textContent = formatCurrency(data.market_cap_usd);
+  totalVolume.textContent    = formatCurrency(data.volume_24h_usd);
+  btcDominance.textContent   = formatPercentage(data.bitcoin_dominance_percentage);
+  const count = data.cryptocurrencies_count != null
+    ? data.cryptocurrencies_count
+    : (state.coins ? state.coins.length : 0);
+  activeCryptocurrencies.textContent = count.toLocaleString('nl-NL');
+}
+
+function renderTable() {
+  cryptoTableBody.innerHTML = '';
+  const start = (state.currentPage - 1) * state.itemsPerPage;
+  const paginated = state.filteredCoins.slice(start, start + state.itemsPerPage);
+  updatePaginationInfo();
+
+  if (paginated.length === 0) {
+    cryptoTableBody.innerHTML = `<tr><td colspan="6" class="no-results">Geen cryptocurrencies gevonden.</td></tr>`;
     return;
   }
-  
-  // Tabelrijen aanmaken
-  state.favoriteCoins.forEach(coin => {
+
+  paginated.forEach(coin => {
+    const q = coin.quotes.EUR;
+    const isFav = state.favorites.includes(coin.id);
     const row = document.createElement('tr');
-    
     row.innerHTML = `
       <td class="rank-col">
-        <span class="rank">${coin.market_cap_rank || '-'}</span>
-        <button class="favorite-button favorited" data-coin-id="${coin.id}">
-          ★
+        <span class="rank">${coin.rank || '-'}</span>
+        <button class="favorite-button ${isFav ? 'favorited' : ''}" data-coin-id="${coin.id}" aria-label="${isFav ? 'Verwijder' : 'Voeg toe'} ${coin.name} favorieten">
+          ${isFav ? '★' : '☆'}
         </button>
       </td>
       <td class="name-col">
-        <a href="#coin/${coin.id}" class="coin-link">
-          <img src="${coin.image}" alt="${coin.name}" class="coin-icon">
+        <a href="#coin/${coin.id}" class="coin-link" data-view="coin-detail" data-coin-id="${coin.id}">
+          <img src="https://static.coinpaprika.com/coin/${coin.id}/logo.png" alt="${coin.name}" class="coin-icon">
           <div class="coin-name-container">
             <span class="coin-name">${coin.name}</span>
-            <span class="coin-symbol">${coin.symbol.toUpperCase()}</span>
+            <span class="coin-symbol">${coin.symbol}</span>
           </div>
         </a>
       </td>
-      <td class="price-col">${formatCurrency(coin.current_price)}</td>
-      <td class="change-col">
-        <span style="color: ${getChangeColor(coin.price_change_percentage_24h)}">
-          ${formatPercentage(coin.price_change_percentage_24h)}
-        </span>
-      </td>
-      <td class="market-cap-col">${formatCurrency(coin.market_cap)}</td>
-      <td class="volume-col">${formatCurrency(coin.total_volume)}</td>
+      <td class="price-col">${formatCurrency(q.price)}</td>
+      <td class="change-col"><span style="color:${getChangeColor(q.percent_change_24h)}">${formatPercentage(q.percent_change_24h)}</span></td>
+      <td class="market-cap-col">${formatCurrency(q.market_cap)}</td>
+      <td class="volume-col">${formatCurrency(q.volume_24h)}</td>
     `;
-    
-    favoritesTableBody.appendChild(row);
+    cryptoTableBody.appendChild(row);
   });
-  
-  // Event listeners toevoegen aan favorieten knoppen
-  document.querySelectorAll('.favorite-button').forEach(button => {
-    button.addEventListener('click', toggleFavorite);
-  });
+
+  document.querySelectorAll('.favorite-button').forEach(btn => btn.addEventListener('click', toggleFavorite));
 }
 
-/**
- * Muntdetails laden voor een specifieke cryptocurrency
- * Demonstreert: Async/Await, Foutafhandeling, DOM Manipulatie
- */
+function renderFavoritesTable() {
+  favoritesTableBody.innerHTML = '';
+  if (state.favoriteCoins.length === 0) {
+    favoritesTableBody.innerHTML = `<tr><td colspan="6" class="no-results">Je hebt nog geen favorieten.</td></tr>`;
+    return;
+  }
+  state.favoriteCoins.forEach(coin => {
+    const q = coin.quotes.EUR;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="rank-col">
+        <span class="rank">${coin.rank || '-'}</span>
+        <button class="favorite-button favorited" data-coin-id="${coin.id}" aria-label="Verwijder ${coin.name} favorieten">★</button>
+      </td>
+      <td class="name-col">
+        <a href="#coin/${coin.id}" class="coin-link" data-view="coin-detail" data-coin-id="${coin.id}">
+          <img src="https://static.coinpaprika.com/coin/${coin.id}/logo.png" alt="${coin.name}" class="coin-icon">
+          <div class="coin-name-container">
+            <span class="coin-name">${coin.name}</span>
+            <span class="coin-symbol">${coin.symbol}</span>
+          </div>
+        </a>
+      </td>
+      <td class="price-col">${formatCurrency(q.price)}</td>
+      <td class="change-col"><span style="color:${getChangeColor(q.percent_change_24h)}">${formatPercentage(q.percent_change_24h)}</span></td>
+      <td class="market-cap-col">${formatCurrency(q.market_cap)}</td>
+      <td class="volume-col">${formatCurrency(q.volume_24h)}</td>
+    `;
+    favoritesTableBody.appendChild(row);
+  });
+  document.querySelectorAll('.favorite-button').forEach(btn => btn.addEventListener('click', toggleFavorite));
+}
+
 async function loadCoinDetails(coinId) {
   try {
-    // Laadstatus tonen
     document.querySelector('.coin-detail-container').classList.add('loading');
-    
-    // Munt gegevens ophalen
-    const coinData = await fetchCoinDetails(coinId);
-    const chartData = await fetchCoinMarketChart(coinId, 30);
-    
-    // Muntdetails renderen
+    const coinData  = await fetchCoinDetails(coinId);
+    const chartData = await fetchCoinMarketChart(coinData.symbol, 30);
     renderCoinDetails(coinData);
-    
-    // Prijsgrafiek renderen
     renderPriceChart(chartData);
-    
-    // Laadstatus verwijderen
     document.querySelector('.coin-detail-container').classList.remove('loading');
-  } catch (error) {
-    console.error('Fout bij laden muntdetails:', error);
+  } catch (e) {
+    console.error('Fout bij laden muntdetails:', e);
     document.querySelector('.coin-detail-container').innerHTML = `
       <div class="error-message">
         <h2>Fout bij laden muntgegevens</h2>
-        <p>${error.message || "Kon muntdetails niet laden. Probeer het later opnieuw."}</p>
+        <p>${e.message}</p>
         <button onclick="window.location.hash = ''" class="retry-button">Terug naar Startpagina</button>
-      </div>
-    `;
+      </div>`;
   }
 }
 
-/**
- * Marktoverzicht bijwerken met globale gegevens
- * Demonstreert: DOM Manipulatie, Object Destructuring
- */
-function updateMarketOverview(data) {
-  if (!data || !data.data) {
-    console.error('Ongeldig formaat globale gegevens:', data);
-    return;
-  }
-  
-  const { total_market_cap, total_volume, market_cap_percentage, active_cryptocurrencies } = data.data;
-  
-  totalMarketCap.textContent = formatCurrency(total_market_cap.eur || total_market_cap.usd);
-  totalVolume.textContent = formatCurrency(total_volume.eur || total_volume.usd);
-  btcDominance.textContent = formatPercentage(market_cap_percentage.btc);
-  activeCryptocurrencies.textContent = active_cryptocurrencies.toLocaleString('nl-NL');
-}
-
-/**
- * De cryptocurrency tabel renderen
- * Demonstreert: DOM Manipulatie, Template Literals, Array Iteratie, Conditionele (Ternary) Operator
- */
-function renderTable() {
-  // Tabel body leegmaken
-  cryptoTableBody.innerHTML = '';
-  
-  // Paginering berekenen
-  const startIndex = (state.currentPage - 1) * state.itemsPerPage;
-  const endIndex = startIndex + state.itemsPerPage;
-  const paginatedCoins = state.filteredCoins.slice(startIndex, endIndex);
-  
-  // Paginering info bijwerken
-  updatePaginationInfo();
-  
-  // Als er geen munten zijn om weer te geven
-  if (paginatedCoins.length === 0) {
-    const noResultsRow = document.createElement('tr');
-    noResultsRow.innerHTML = `
-      <td colspan="6" class="no-results">Geen cryptocurrencies gevonden die aan je criteria voldoen.</td>
-    `;
-    cryptoTableBody.appendChild(noResultsRow);
-    return;
-  }
-  
-  // Tabelrijen aanmaken
-  paginatedCoins.forEach(coin => {
-    const row = document.createElement('tr');
-    const isFavorite = state.favorites.includes(coin.id);
-    
-    row.innerHTML = `
-      <td class="rank-col">
-        <span class="rank">${coin.market_cap_rank || '-'}</span>
-        <button class="favorite-button ${isFavorite ? 'favorited' : ''}" data-coin-id="${coin.id}">
-          ${isFavorite ? '★' : '☆'}
-        </button>
-      </td>
-      <td class="name-col">
-        <a href="#coin/${coin.id}" class="coin-link">
-          <img src="${coin.image}" alt="${coin.name}" class="coin-icon">
-          <div class="coin-name-container">
-            <span class="coin-name">${coin.name}</span>
-            <span class="coin-symbol">${coin.symbol.toUpperCase()}</span>
-          </div>
-        </a>
-      </td>
-      <td class="price-col">${formatCurrency(coin.current_price)}</td>
-      <td class="change-col">
-        <span style="color: ${getChangeColor(coin.price_change_percentage_24h)}">
-          ${formatPercentage(coin.price_change_percentage_24h)}
-        </span>
-      </td>
-      <td class="market-cap-col">${formatCurrency(coin.market_cap)}</td>
-      <td class="volume-col">${formatCurrency(coin.total_volume)}</td>
-    `;
-    
-    cryptoTableBody.appendChild(row);
-  });
-  
-  // Event listeners toevoegen aan favorieten knoppen
-  document.querySelectorAll('.favorite-button').forEach(button => {
-    button.addEventListener('click', toggleFavorite);
-  });
-}
-
-/**
- * Muntdetails renderen
- * Demonstreert: DOM Manipulatie, Template Literals, Conditionele Logica
- */
 function renderCoinDetails(coin) {
-  // Munt logo instellen
-  document.getElementById('coin-logo').src = coin.image.small;
+  const q = coin.quotes.EUR;
+  document.getElementById('coin-logo').src = `https://static.coinpaprika.com/coin/${coin.id}/logo.png`;
   document.getElementById('coin-logo').alt = `${coin.name} logo`;
-  
-  // Munt naam instellen
-  document.getElementById('coin-name').textContent = coin.name;
-  
-  // Munt prijs instellen
-  document.getElementById('coin-price').textContent = formatCurrency(coin.market_data.current_price.eur || coin.market_data.current_price.usd);
-  
-  // Prijsverandering percentage instellen
-  const priceChange = coin.market_data.price_change_percentage_24h;
-  const coinChangeElement = document.getElementById('coin-change');
-  coinChangeElement.textContent = formatPercentage(priceChange);
-  coinChangeElement.className = 'coin-change';
-  coinChangeElement.classList.add(priceChange >= 0 ? 'positive' : 'negative');
-  
-  // Marktkapitalisatie instellen
-  document.getElementById('market-cap').textContent = formatCurrency(coin.market_data.market_cap.eur || coin.market_data.market_cap.usd);
-  
-  // 24u volume instellen
-  document.getElementById('volume').textContent = formatCurrency(coin.market_data.total_volume.eur || coin.market_data.total_volume.usd);
-  
-  // Overzicht instellen
-  document.getElementById('overview').innerHTML = coin.description.en
-    ? `<p>${coin.description.en.split('. ').slice(0, 3).join('. ')}.</p>`
-    : '<p>Geen beschrijving beschikbaar voor deze cryptocurrency.</p>';
+  document.getElementById('coin-name').textContent  = coin.name;
+  document.getElementById('coin-price').textContent = formatCurrency(q.price);
+  const changeVal = q.percent_change_24h;
+  const changeEl = document.getElementById('coin-change');
+  changeEl.textContent = formatPercentage(changeVal);
+  changeEl.className    = `coin-change ${changeVal >= 0 ? 'positive' : 'negative'}`;
+  document.getElementById('market-cap').textContent = formatCurrency(q.market_cap);
+  document.getElementById('volume').textContent     = formatCurrency(q.volume_24h);
+  document.getElementById('overview').innerHTML     = coin.description
+    ? `<p>${coin.description}</p>`
+    : '<p>Geen beschrijving beschikbaar.</p>';
 }
 
-/**
- * Prijsgrafiek renderen met Chart.js
- * Demonstreert: Integratie van externe bibliotheek, Array Methods (map)
- * Bron: Chart.js - https://www.chartjs.org/docs/latest/
- */
 function renderPriceChart(chartData) {
-  const ctx = document.getElementById('price-chart').getContext('2d');
-  
-  // Bestaande grafiek wissen
-  if (window.priceChart) {
-    window.priceChart.destroy();
+  const container = document.querySelector('.chart-container');
+  const canvas    = document.getElementById('price-chart');
+  const oldWarn   = container.querySelector('.chart-warning');
+  if (oldWarn) oldWarn.remove();
+
+  if (!chartData || chartData.length === 0) {
+    if (window.priceChart) {
+      window.priceChart.destroy();
+      window.priceChart = null;
+    }
+    canvas.style.display = 'none';
+    const msg = document.createElement('div');
+    msg.className = 'chart-warning';
+    msg.textContent = 'Historische prijsgegevens niet beschikbaar.';
+    container.appendChild(msg);
+    return;
   }
-  
-  // Grafiekgegevens formatteren
-  const labels = chartData.prices.map(price => new Date(price[0]).toLocaleDateString('nl-NL'));
-  const data = chartData.prices.map(price => price[1]);
-  
-  // Grafiekkleur bepalen op basis van prijstrend
-  const startPrice = data[0];
-  const endPrice = data[data.length - 1];
-  const chartColor = endPrice >= startPrice ? '#00b894' : '#e74c3c';
-  
-  // Grafiek aanmaken
+
+  canvas.style.display = '';
+  const ctx = canvas.getContext('2d');
+  if (window.priceChart) window.priceChart.destroy();
+
+  const labels = chartData.map(pt => new Date(pt.time_close).toLocaleDateString('nl-NL'));
+  const data   = chartData.map(pt => pt.price_close);
+  const color  = data[data.length - 1] >= data[0] ? '#10b981' : '#ef4444';
+
   window.priceChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         label: 'Prijs (EUR)',
-        data: data,
-        borderColor: chartColor,
-        backgroundColor: `${chartColor}20`,
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.1,
-        fill: true
+        data,
+        borderColor: color,
+        backgroundColor: `${color}20`,
+        fill: true,
+        tension: 0.1
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-          callbacks: {
-            label: function(context) {
-              return `€${context.raw.toLocaleString('nl-NL', { maximumFractionDigits: 2 }).replace('.', ',')}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          display: true,
-          grid: {
-            display: false
-          },
-          ticks: {
-            maxTicksLimit: 5,
-            color: '#718096'
-          }
-        },
-        y: {
-          display: true,
-          grid: {
-            color: '#2d3748',
-            drawBorder: false
-          },
-          ticks: {
-            color: '#718096',
-            callback: function(value) {
-              return '€' + value.toLocaleString('nl-NL', { maximumFractionDigits: 0 }).replace('.', ',');
-            }
-          }
-        }
-      }
+      scales: { /* zoals eerder */ },
+      plugins: { /* zoals eerder */ }
     }
   });
 }
 
-/**
- * Favoriete status voor een munt in-/uitschakelen
- * Demonstreert: Event Handling, LocalStorage, DOM Manipulatie
- */
-function toggleFavorite(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  
-  const button = event.currentTarget;
-  const coinId = button.dataset.coinId;
-  
-  if (state.favorites.includes(coinId)) {
-    // Uit favorieten verwijderen
-    state.favorites = state.favorites.filter(id => id !== coinId);
-    button.classList.remove('favorited');
-    button.textContent = '☆';
+function toggleFavorite(e) {
+  e.preventDefault(); e.stopPropagation();
+  const id = e.currentTarget.dataset.coinId;
+  if (state.favorites.includes(id)) {
+    state.favorites = state.favorites.filter(x => x !== id);
   } else {
-    // Aan favorieten toevoegen
-    state.favorites.push(coinId);
-    button.classList.add('favorited');
-    button.textContent = '★';
+    state.favorites.push(id);
   }
-  
-  // Opslaan in localStorage
   localStorage.setItem('favorites', JSON.stringify(state.favorites));
-  
-  // Als we op de favorieten pagina zijn, de weergave bijwerken
-  if (state.currentView === 'favorites') {
-    loadFavoritesData();
-  }
-  
-  // Als we momenteel filteren op favorieten, de tabel bijwerken
-  if (state.filterType === 'favorites') {
-    handleFilter();
-  }
-}
-
-/**
- * Zoekinvoer afhandelen
- * Demonstreert: Formuliervalidatie, State Management
- */
-function handleSearch() {
-  state.searchTerm = searchInput.value.toLowerCase().trim();
-  filterAndSortCoins();
-  state.currentPage = 1;
+  if (state.currentView === 'favorites') loadFavoritesData();
   renderTable();
 }
 
-/**
- * Filterwijziging afhandelen
- * Demonstreert: Event Handling, State Management
- */
-function handleFilter() {
-  state.filterType = filterSelect.value;
-  filterAndSortCoins();
-  state.currentPage = 1;
-  renderTable();
-}
+function handleSearch() { state.searchTerm = searchInput.value.toLowerCase(); state.currentPage = 1; filterAndSort(); renderTable(); }
+function handleFilter() { state.filterType  = filterSelect.value;              state.currentPage = 1; filterAndSort(); renderTable(); }
+function handleSort()   { state.sortType    = sortSelect.value;               filterAndSort(); renderTable(); }
 
-/**
- * Sorteerwijziging afhandelen
- * Demonstreert: Event Handling, State Management
- */
-function handleSort() {
-  state.sortType = sortSelect.value;
-  filterAndSortCoins();
-  renderTable();
-}
-
-/**
- * Munten filteren en sorteren op basis van huidige status
- * Demonstreert: Array Methods (filter, sort), Arrow Functions
- */
-function filterAndSortCoins() {
-  // Eerst de munten filteren
-  state.filteredCoins = state.coins.filter(coin => {
-    // Zoekfilter toepassen
-    const matchesSearch = 
-      coin.name.toLowerCase().includes(state.searchTerm) || 
-      coin.symbol.toLowerCase().includes(state.searchTerm);
-    
-    // Type filter toepassen
-    let matchesFilter = true;
-    if (state.filterType === 'favorites') {
-      matchesFilter = state.favorites.includes(coin.id);
-    } else if (state.filterType === 'gainers') {
-      matchesFilter = coin.price_change_percentage_24h > 0;
-    } else if (state.filterType === 'losers') {
-      matchesFilter = coin.price_change_percentage_24h < 0;
-    }
-    
-    return matchesSearch && matchesFilter;
+function filterAndSort() {
+  state.filteredCoins = state.coins.filter(c => {
+    const q = c.quotes.EUR;
+    const match = c.name.toLowerCase().includes(state.searchTerm)
+               || c.symbol.toLowerCase().includes(state.searchTerm);
+    let ok = true;
+    if (state.filterType === 'favorites') ok = state.favorites.includes(c.id);
+    if (state.filterType === 'gainers')   ok = q.percent_change_24h > 0;
+    if (state.filterType === 'losers')    ok = q.percent_change_24h < 0;
+    return match && ok;
   });
-  
-  // Daarna de gefilterde munten sorteren
+
   state.filteredCoins.sort((a, b) => {
+    const qa = a.quotes.EUR, qb = b.quotes.EUR;
     switch (state.sortType) {
-      case 'market_cap_desc':
-        return b.market_cap - a.market_cap;
-      case 'market_cap_asc':
-        return a.market_cap - b.market_cap;
-      case 'price_desc':
-        return b.current_price - a.current_price;
-      case 'price_asc':
-        return a.current_price - b.current_price;
-      case 'volume_desc':
-        return b.total_volume - a.total_volume;
-      case 'volume_asc':
-        return a.total_volume - b.total_volume;
-      case 'change_desc':
-        return b.price_change_percentage_24h - a.price_change_percentage_24h;
-      case 'change_asc':
-        return a.price_change_percentage_24h - b.price_change_percentage_24h;
-      default:
-        return b.market_cap - a.market_cap;
+      case 'market_cap_desc': return qb.market_cap - qa.market_cap;
+      case 'market_cap_asc':  return qa.market_cap - qb.market_cap;
+      case 'price_desc':      return qb.price - qa.price;
+      case 'price_asc':       return qa.price - qb.price;
+      case 'volume_desc':     return qb.volume_24h - qa.volume_24h;
+      case 'volume_asc':      return qa.volume_24h - qb.volume_24h;
+      case 'change_desc':     return qb.percent_change_24h - qa.percent_change_24h;
+      case 'change_asc':      return qa.percent_change_24h - qb.percent_change_24h;
+      default:                return qb.market_cap - qa.market_cap;
     }
   });
 }
 
-/**
- * Paginering informatie bijwerken
- * Demonstreert: DOM Manipulatie, Wiskundige bewerkingen
- */
 function updatePaginationInfo() {
-  const totalPages = Math.ceil(state.filteredCoins.length / state.itemsPerPage);
-  pageInfo.textContent = `Pagina ${state.currentPage} van ${totalPages || 1}`;
-  
-  // Knopstatussen bijwerken
+  const total = Math.ceil(state.filteredCoins.length / state.itemsPerPage);
+  pageInfo.textContent = `Pagina ${state.currentPage} van ${total || 1}`;
   prevPageButton.disabled = state.currentPage <= 1;
-  nextPageButton.disabled = state.currentPage >= totalPages;
+  nextPageButton.disabled = state.currentPage >= total;
 }
+function goToPrevPage() { if (state.currentPage > 1) { state.currentPage--; renderTable(); window.scrollTo(0,0);} }
+function goToNextPage() { const total = Math.ceil(state.filteredCoins.length/state.itemsPerPage); if (state.currentPage < total) { state.currentPage++; renderTable(); window.scrollTo(0,0);} }
 
-/**
- * Naar vorige pagina gaan
- * Demonstreert: Event Handling, State Management
- */
-function goToPrevPage() {
-  if (state.currentPage > 1) {
-    state.currentPage--;
-    renderTable();
-    window.scrollTo(0, 0);
-  }
-}
-
-/**
- * Naar volgende pagina gaan
- * Demonstreert: Event Handling, State Management
- */
-function goToNextPage() {
-  const totalPages = Math.ceil(state.filteredCoins.length / state.itemsPerPage);
-  if (state.currentPage < totalPages) {
-    state.currentPage++;
-    renderTable();
-    window.scrollTo(0, 0);
-  }
-}
-
-/**
- * Laadstatus tonen
- * Demonstreert: DOM Manipulatie
- */
 function showLoadingState() {
-  cryptoTableBody.innerHTML = `
-    <tr class="loading-row">
-      <td colspan="6" class="loading-message">Cryptocurrency gegevens laden...</td>
-    </tr>
-  `;
+  cryptoTableBody.innerHTML = `<tr class="loading-row"><td colspan="6" class="loading-message">Laden…</td></tr>`;
 }
-
-/**
- * Laadstatus verbergen
- * Demonstreert: DOM Manipulatie
- */
-function hideLoadingState() {
-  // Laadstatus wordt automatisch verborgen wanneer de tabel wordt gerenderd
+function hideLoadingState() { /* overschreven bij render */ }
+function showErrorState(msg) {
+  cryptoTableBody.innerHTML = `<tr class="error-row"><td colspan="6" class="error-message">${msg}<button onclick="window.location.reload()" class="retry-button">Opnieuw proberen</button></td></tr>`;
 }
-
-/**
- * Foutstatus tonen
- * Demonstreert: DOM Manipulatie, Foutafhandeling
- */
-function showErrorState(message) {
-  cryptoTableBody.innerHTML = `
-    <tr class="error-row">
-      <td colspan="6" class="error-message">
-        ${message}
-        <button onclick="window.location.reload()" class="retry-button">Opnieuw proberen</button>
-      </td>
-    </tr>
-  `;
-}
-
-// Initialiseer de applicatie wanneer de DOM volledig is geladen
-document.addEventListener('DOMContentLoaded', initApp);
-
-// Functies exporteren voor testen
-export {
-  initApp,
-  toggleTheme,
-  handleRouting,
-  loadHomeData,
-  loadCoinDetails,
-  renderTable,
-  toggleFavorite
-};

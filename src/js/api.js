@@ -1,168 +1,84 @@
-// CoinGecko API integratie
-/**
- * CoinGecko API integratie module
- * 
- * Dit bestand regelt alle API-aanroepen naar de CoinGecko cryptocurrency data API.
- * Het biedt methoden voor het ophalen van muntlijsten, globale marktgegevens,
- * muntdetails en historische prijsgegevens voor grafieken.
- * 
- * Bron: https://www.coingecko.com/en/api/documentation
- */
+// src/js/api.js
 
-class CoinGeckoAPI {
+class CoinPaprikaAPI {
   constructor() {
-    this.baseUrl = 'https://api.coingecko.com/api/v3';
-    this.apiKey = ''; // Voeg hier je API-sleutel toe als je er een hebt
+    this.baseUrl = 'https://api.coinpaprika.com/v1';
   }
 
-  /**
-   * Haal lijst met munten en marktgegevens op
-   * Demonstreert: Fetch API, Promises, Async/Await
-   */
+  // Helper: fetch + basic error handling
+  async _get(path) {
+    const res = await fetch(`${this.baseUrl}${path}`);
+    if (!res.ok) {
+      throw new Error(`API fout: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  // 1. Muntenlijst (paginering)
   async fetchCoinsList(page = 1, perPage = 100) {
-    try {
-      // Tijdstempel toevoegen om caching-problemen te voorkomen
-      const timestamp = new Date().getTime();
-      const response = await fetch(
-        `${this.baseUrl}/coins/markets?vs_currency=eur&order=market_cap_desc&per_page=${perPage}&page=${page}&sparkline=false&price_change_percentage=24h&timestamp=${timestamp}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`API fout: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Fout bij ophalen muntenlijst:', error);
-      // Lege array teruggeven in plaats van een fout te gooien om crashes te voorkomen
-      return [];
-    }
+    const offset = (page - 1) * perPage;
+    const json = await this._get(`/tickers?quotes=EUR&limit=${perPage}&start=${offset}`);
+    return json; // array van ticker-objecten
   }
 
-  /**
-   * Haal globale marktgegevens op
-   * Demonstreert: Fetch API, Foutafhandeling
-   */
+  // 2. Globale marktgegevens
   async fetchGlobalData() {
-    try {
-      const timestamp = new Date().getTime();
-      const response = await fetch(
-        `${this.baseUrl}/global?timestamp=${timestamp}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`API fout: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Fout bij ophalen globale gegevens:', error);
-      // Standaard datastructuur teruggeven om crashes te voorkomen
-      return {
-        data: {
-          total_market_cap: { eur: 0 },
-          total_volume: { eur: 0 },
-          market_cap_percentage: { btc: 0 },
-          active_cryptocurrencies: 0
-        }
-      };
-    }
+    const json = await this._get(`/global`);
+    return json; 
+    // object bevat: market_cap_usd, volume_24h_usd, bitcoin_dominance_percentage, cryptocurrencies_count, etc.
   }
 
-  /**
-   * Haalt gedetailleerde informatie op voor een specifieke munt
-   * Demonstreert: Fetch API, Dynamische URL-parameters
-   */
+  // 3. Details van één munt
   async fetchCoinDetails(coinId) {
+    const coinJson   = await this._get(`/coins/${coinId}`);
+    const tickerJson = await this._get(`/tickers/${coinId}?quotes=EUR`);
+    return {
+      id:                 coinJson.id,
+      name:               coinJson.name,
+      symbol:             coinJson.symbol,
+      rank:               tickerJson.rank,
+      description:        coinJson.description,
+      quotes:             tickerJson.quotes,         // quotes.EUR.price, .percent_change_24h, .market_cap, .volume_24h
+      circulating_supply: tickerJson.circulating_supply,
+      total_supply:       tickerJson.total_supply,
+      max_supply:         tickerJson.max_supply,
+      last_updated:       tickerJson.last_updated
+    };
+  }
+
+  // 4. Marktgrafiek via Binance (gratis, CORS OK)
+  async fetchCoinMarketChart(coinSymbol, days = 7) {
     try {
-      const timestamp = new Date().getTime();
-      const response = await fetch(
-        `${this.baseUrl}/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&timestamp=${timestamp}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        }
+      // Binance verwacht symbol as e.g. 'BTCUSDT'
+      const pair = `${coinSymbol.toUpperCase()}USDT`;
+      const limit = days; // daily bars
+      const res = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1d&limit=${limit}`
       );
-      
-      if (!response.ok) {
-        throw new Error(`API fout: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error(`Fout bij ophalen details voor munt ${coinId}:`, error);
-      throw error;
+      if (!res.ok) throw new Error(`API fout: ${res.status}`);
+      const raw = await res.json();
+      // raw: [ [ openTime, open, high, low, close, volume, ... ], ... ]
+      return raw.map(item => ({
+        time_close:  item[0],
+        price_close: parseFloat(item[4])
+      }));
+    } catch (err) {
+      console.warn('Binance chart-error:', err);
+      return [];  // signal “no data”
     }
   }
 
-  /**
-   * Haal marktgrafiekgegevens op voor een specifieke munt
-   * Demonstreert: Fetch API, Query-parameters
-   */
-  async fetchCoinMarketChart(coinId, days = 7) {
-    try {
-      const timestamp = new Date().getTime();
-      const response = await fetch(
-        `${this.baseUrl}/coins/${coinId}/market_chart?vs_currency=eur&days=${days}&timestamp=${timestamp}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`API fout: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error(`Fout bij ophalen marktgrafiek voor munt ${coinId}:`, error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Haal gegevens op voor favoriete munten
-   * Demonstreert: Fetch API, Array-methoden
-   */
+  // 5. Favorieten: haal eerste 1000 en filter
   async fetchFavoriteCoins(favoriteIds) {
-    try {
-      if (!favoriteIds || favoriteIds.length === 0) {
-        return [];
-      }
-      
-      // Alle munten ophalen en filteren op favorieten
-      const allCoins = await this.fetchCoinsList(1, 250);
-      return allCoins.filter(coin => favoriteIds.includes(coin.id));
-    } catch (error) {
-      console.error('Fout bij ophalen favoriete munten:', error);
-      return [];
-    }
+    if (!favoriteIds || favoriteIds.length === 0) return [];
+    const all = await this.fetchCoinsList(1, 1000);
+    return all.filter(c => favoriteIds.includes(c.id));
   }
 }
 
-// API-instantie aanmaken en exporteren
-const coinGeckoAPI = new CoinGeckoAPI();
-
-// API-methoden exporteren
-export const fetchCoinsList = (page, perPage) => coinGeckoAPI.fetchCoinsList(page, perPage);
-export const fetchGlobalData = () => coinGeckoAPI.fetchGlobalData();
-export const fetchCoinDetails = (coinId) => coinGeckoAPI.fetchCoinDetails(coinId);
-export const fetchCoinMarketChart = (coinId, days) => coinGeckoAPI.fetchCoinMarketChart(coinId, days);
-export const fetchFavoriteCoins = (favoriteIds) => coinGeckoAPI.fetchFavoriteCoins(favoriteIds);
+const coinPaprikaAPI = new CoinPaprikaAPI();
+export const fetchCoinsList       = (p, n) => coinPaprikaAPI.fetchCoinsList(p, n);
+export const fetchGlobalData      = ()      => coinPaprikaAPI.fetchGlobalData();
+export const fetchCoinDetails     = id      => coinPaprikaAPI.fetchCoinDetails(id);
+export const fetchCoinMarketChart = (s, d)  => coinPaprikaAPI.fetchCoinMarketChart(s, d);
+export const fetchFavoriteCoins   = ids     => coinPaprikaAPI.fetchFavoriteCoins(ids);
