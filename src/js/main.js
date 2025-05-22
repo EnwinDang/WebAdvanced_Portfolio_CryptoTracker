@@ -33,6 +33,7 @@ const backToHomeFromFavorites = document.getElementById('back-to-home-from-favor
 const favoritesTableBody = document.getElementById('favorites-table-body');
 const noFavoritesMessage = document.getElementById('no-favorites-message');
 
+// App state
 let state = {
   currentView: 'home',
   currentCoinId: null,
@@ -47,6 +48,7 @@ let state = {
   sortType: 'market_cap_desc'
 };
 
+// Init app
 document.addEventListener('DOMContentLoaded', initApp);
 
 async function initApp() {
@@ -56,6 +58,7 @@ async function initApp() {
   window.addEventListener('hashchange', handleRouting);
 }
 
+// Event listeners
 function setupEventListeners() {
   themeToggle.addEventListener('click', toggleTheme);
   searchInput.addEventListener('input', debounce(handleSearch, 300));
@@ -71,21 +74,51 @@ function setupEventListeners() {
     });
   });
 
-  if (backToHomeButton) backToHomeButton.addEventListener('click', e => { e.preventDefault(); navigateTo('home'); });
-  if (backToHomeFromFavorites) backToHomeFromFavorites.addEventListener('click', e => { e.preventDefault(); navigateTo('home'); });
+  // Naar home, pagina 1 van coins
+  const logoLink = document.querySelector('.logo a');
+  if (logoLink) {
+    logoLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      state.currentPage = 1; 
+      navigateTo('home');
+      renderTable();
+      window.scrollTo(0, 0); 
+    });
+  }
+
+  if (backToHomeButton) {
+    backToHomeButton.addEventListener('click', e => {
+      e.preventDefault();
+      navigateTo('home');
+    });
+  }
+  if (backToHomeFromFavorites) {
+    backToHomeFromFavorites.addEventListener('click', e => {
+      e.preventDefault();
+      navigateTo('home');
+    });
+  }
 }
 
+
+// Theme
 function initTheme() {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
   const saved = localStorage.getItem('theme');
-  if (saved === 'dark' || (!saved && prefersDark.matches)) document.body.classList.add('dark-theme');
-  prefersDark.addEventListener('change', e => document.body.classList.toggle('dark-theme', e.matches));
+  if (saved === 'dark' || (!saved && prefersDark.matches)) {
+    document.body.classList.add('dark-theme');
+  }
+  prefersDark.addEventListener('change', e => {
+    document.body.classList.toggle('dark-theme', e.matches);
+  });
 }
+
 function toggleTheme() {
   const isDark = document.body.classList.toggle('dark-theme');
   localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
 
+// Routing
 async function handleRouting() {
   const hash = window.location.hash.substring(1);
   if (hash.startsWith('coin/')) {
@@ -105,20 +138,26 @@ async function handleRouting() {
 }
 
 function navigateTo(view, coinId) {
-  if (view === 'home') window.location.hash = '';
-  else if (view === 'favorites') window.location.hash = 'favorites';
-  else if (view === 'coin-detail' && coinId) window.location.hash = `coin/${coinId}`;
+  if (view === 'home') {
+    window.location.hash = '';
+  } else if (view === 'favorites') {
+    window.location.hash = 'favorites';
+  } else if (view === 'coin-detail' && coinId) {
+    window.location.hash = `coin/${coinId}`;
+  }
 }
 
 function showView(view) {
   homeView.style.display = 'none';
   coinDetailView.style.display = 'none';
   if (favoritesView) favoritesView.style.display = 'none';
-  if (view === 'home') homeView.style.display = 'block';
+
+  if (view === 'home')        homeView.style.display = 'block';
   if (view === 'coin-detail') coinDetailView.style.display = 'block';
   if (view === 'favorites' && favoritesView) favoritesView.style.display = 'block';
 }
 
+// Laden van home data
 async function loadHomeData() {
   try {
     showLoadingState();
@@ -135,6 +174,7 @@ async function loadHomeData() {
   }
 }
 
+// Laad favorieten
 async function loadFavoritesData() {
   try {
     if (!favoritesTableBody) return;
@@ -163,16 +203,20 @@ async function loadFavoritesData() {
   }
 }
 
+//Marktoverzicht bijwerken met globale gegevens
 function updateMarketOverview(data) {
   totalMarketCap.textContent = formatCurrency(data.market_cap_usd);
   totalVolume.textContent    = formatCurrency(data.volume_24h_usd);
   btcDominance.textContent   = formatPercentage(data.bitcoin_dominance_percentage);
+
   const count = data.cryptocurrencies_count != null
     ? data.cryptocurrencies_count
     : (state.coins ? state.coins.length : 0);
+
   activeCryptocurrencies.textContent = count.toLocaleString('nl-NL');
 }
 
+// Render table
 function renderTable() {
   cryptoTableBody.innerHTML = '';
   const start = (state.currentPage - 1) * state.itemsPerPage;
@@ -188,16 +232,20 @@ function renderTable() {
     const q = coin.quotes.EUR;
     const isFav = state.favorites.includes(coin.id);
     const row = document.createElement('tr');
+    row.classList.add('observe-fade'); // <-- Observer animatie toegevoegd
     row.innerHTML = `
       <td class="rank-col">
         <span class="rank">${coin.rank || '-'}</span>
-        <button class="favorite-button ${isFav ? 'favorited' : ''}" data-coin-id="${coin.id}" aria-label="${isFav ? 'Verwijder' : 'Voeg toe'} ${coin.name} favorieten">
+        <button class="favorite-button ${isFav ? 'favorited' : ''}"
+                data-coin-id="${coin.id}"
+                aria-label="${isFav ? 'Verwijder' : 'Voeg toe'} ${coin.name} favorieten">
           ${isFav ? '★' : '☆'}
         </button>
       </td>
       <td class="name-col">
         <a href="#coin/${coin.id}" class="coin-link" data-view="coin-detail" data-coin-id="${coin.id}">
-          <img src="https://static.coinpaprika.com/coin/${coin.id}/logo.png" alt="${coin.name}" class="coin-icon">
+          <img src="https://static.coinpaprika.com/coin/${coin.id}/logo.png"
+               alt="${coin.name}" class="coin-icon">
           <div class="coin-name-container">
             <span class="coin-name">${coin.name}</span>
             <span class="coin-symbol">${coin.symbol}</span>
@@ -205,16 +253,25 @@ function renderTable() {
         </a>
       </td>
       <td class="price-col">${formatCurrency(q.price)}</td>
-      <td class="change-col"><span style="color:${getChangeColor(q.percent_change_24h)}">${formatPercentage(q.percent_change_24h)}</span></td>
+      <td class="change-col">
+        <span style="color:${getChangeColor(q.percent_change_24h)}">${
+          formatPercentage(q.percent_change_24h)
+        }</span>
+      </td>
       <td class="market-cap-col">${formatCurrency(q.market_cap)}</td>
       <td class="volume-col">${formatCurrency(q.volume_24h)}</td>
     `;
     cryptoTableBody.appendChild(row);
   });
 
-  document.querySelectorAll('.favorite-button').forEach(btn => btn.addEventListener('click', toggleFavorite));
+  document.querySelectorAll('.favorite-button')
+          .forEach(btn => btn.addEventListener('click', toggleFavorite));
+
+  // IntersectionObserver: laat rijen animeren als ze in beeld komen
+  observeRows();
 }
 
+// Render favorieten tabel
 function renderFavoritesTable() {
   favoritesTableBody.innerHTML = '';
   if (state.favoriteCoins.length === 0) {
@@ -224,14 +281,18 @@ function renderFavoritesTable() {
   state.favoriteCoins.forEach(coin => {
     const q = coin.quotes.EUR;
     const row = document.createElement('tr');
+    row.classList.add('observe-fade'); // <-- Observer animatie toegevoegd
     row.innerHTML = `
       <td class="rank-col">
         <span class="rank">${coin.rank || '-'}</span>
-        <button class="favorite-button favorited" data-coin-id="${coin.id}" aria-label="Verwijder ${coin.name} favorieten">★</button>
+        <button class="favorite-button favorited"
+                data-coin-id="${coin.id}"
+                aria-label="Verwijder ${coin.name} favorieten">★</button>
       </td>
       <td class="name-col">
         <a href="#coin/${coin.id}" class="coin-link" data-view="coin-detail" data-coin-id="${coin.id}">
-          <img src="https://static.coinpaprika.com/coin/${coin.id}/logo.png" alt="${coin.name}" class="coin-icon">
+          <img src="https://static.coinpaprika.com/coin/${coin.id}/logo.png"
+               alt="${coin.name}" class="coin-icon">
           <div class="coin-name-container">
             <span class="coin-name">${coin.name}</span>
             <span class="coin-symbol">${coin.symbol}</span>
@@ -245,13 +306,19 @@ function renderFavoritesTable() {
     `;
     favoritesTableBody.appendChild(row);
   });
-  document.querySelectorAll('.favorite-button').forEach(btn => btn.addEventListener('click', toggleFavorite));
+
+  document.querySelectorAll('.favorite-button')
+          .forEach(btn => btn.addEventListener('click', toggleFavorite));
+
+  // IntersectionObserver: laat rijen animeren als ze in beeld komen
+  observeRows();
 }
 
+// Laad coin details
 async function loadCoinDetails(coinId) {
   try {
     document.querySelector('.coin-detail-container').classList.add('loading');
-    const coinData  = await fetchCoinDetails(coinId);
+    const coinData = await fetchCoinDetails(coinId);
     const chartData = await fetchCoinMarketChart(coinData.symbol, 30);
     renderCoinDetails(coinData);
     renderPriceChart(chartData);
@@ -262,39 +329,40 @@ async function loadCoinDetails(coinId) {
       <div class="error-message">
         <h2>Fout bij laden muntgegevens</h2>
         <p>${e.message}</p>
-        <button onclick="window.location.hash = ''" class="retry-button">Terug naar Startpagina</button>
+        <button onclick="window.location.hash = ''" class="retry-button">
+          Terug naar Startpagina
+        </button>
       </div>`;
   }
 }
 
+// Render coin details
 function renderCoinDetails(coin) {
   const q = coin.quotes.EUR;
   document.getElementById('coin-logo').src = `https://static.coinpaprika.com/coin/${coin.id}/logo.png`;
   document.getElementById('coin-logo').alt = `${coin.name} logo`;
-  document.getElementById('coin-name').textContent  = coin.name;
+  document.getElementById('coin-name').textContent = coin.name;
   document.getElementById('coin-price').textContent = formatCurrency(q.price);
   const changeVal = q.percent_change_24h;
   const changeEl = document.getElementById('coin-change');
   changeEl.textContent = formatPercentage(changeVal);
-  changeEl.className    = `coin-change ${changeVal >= 0 ? 'positive' : 'negative'}`;
+  changeEl.className = `coin-change ${changeVal >= 0 ? 'positive' : 'negative'}`;
   document.getElementById('market-cap').textContent = formatCurrency(q.market_cap);
-  document.getElementById('volume').textContent     = formatCurrency(q.volume_24h);
-  document.getElementById('overview').innerHTML     = coin.description
+  document.getElementById('volume').textContent = formatCurrency(q.volume_24h);
+  document.getElementById('overview').innerHTML = coin.description
     ? `<p>${coin.description}</p>`
     : '<p>Geen beschrijving beschikbaar.</p>';
 }
 
+// Render price chart
 function renderPriceChart(chartData) {
   const container = document.querySelector('.chart-container');
-  const canvas    = document.getElementById('price-chart');
-  const oldWarn   = container.querySelector('.chart-warning');
+  const canvas = document.getElementById('price-chart');
+  const oldWarn = container.querySelector('.chart-warning');
   if (oldWarn) oldWarn.remove();
 
   if (!chartData || chartData.length === 0) {
-    if (window.priceChart) {
-      window.priceChart.destroy();
-      window.priceChart = null;
-    }
+    if (window.priceChart) { window.priceChart.destroy(); window.priceChart = null; }
     canvas.style.display = 'none';
     const msg = document.createElement('div');
     msg.className = 'chart-warning';
@@ -313,48 +381,49 @@ function renderPriceChart(chartData) {
 
   window.priceChart = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Prijs (EUR)',
-        data,
-        borderColor: color,
-        backgroundColor: `${color}20`,
-        fill: true,
-        tension: 0.1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: { /* zoals eerder */ },
-      plugins: { /* zoals eerder */ }
-    }
+    data:    { labels, datasets: [{ label: 'Prijs (EUR)', data, borderColor: color, backgroundColor: `${color}20`, fill: true, tension: 0.1 }] },
+    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
+// Toggle favorites
 function toggleFavorite(e) {
-  e.preventDefault(); e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
   const id = e.currentTarget.dataset.coinId;
-  if (state.favorites.includes(id)) {
-    state.favorites = state.favorites.filter(x => x !== id);
-  } else {
-    state.favorites.push(id);
-  }
+  if (state.favorites.includes(id)) state.favorites = state.favorites.filter(x => x !== id);
+  else state.favorites.push(id);
   localStorage.setItem('favorites', JSON.stringify(state.favorites));
   if (state.currentView === 'favorites') loadFavoritesData();
   renderTable();
 }
 
-function handleSearch() { state.searchTerm = searchInput.value.toLowerCase(); state.currentPage = 1; filterAndSort(); renderTable(); }
-function handleFilter() { state.filterType  = filterSelect.value;              state.currentPage = 1; filterAndSort(); renderTable(); }
-function handleSort()   { state.sortType    = sortSelect.value;               filterAndSort(); renderTable(); }
+// Search/filter/sort handlers
+function handleSearch() {
+  const term = searchInput.value.toLowerCase().trim();
+  state.currentPage = 1;
+  if (term.length === 0) {
+    state.searchTerm = '';
+    state.filteredCoins = state.coins;
+    renderTable();
+    return;
+  }
+  if (term.length < 3) {
+    //Melding
+    cryptoTableBody.innerHTML = `<tr><td colspan="6" class="no-results">Voer minstens 3 letters in om te zoeken.</td></tr>`;
+    return;
+  }
+  state.searchTerm = term;
+  filterAndSort();
+  renderTable();
+}
+function handleFilter() { state.filterType = filterSelect.value; state.currentPage = 1; filterAndSort(); renderTable(); }
+function handleSort()   { state.sortType = sortSelect.value; filterAndSort(); renderTable(); }
 
 function filterAndSort() {
   state.filteredCoins = state.coins.filter(c => {
     const q = c.quotes.EUR;
-    const match = c.name.toLowerCase().includes(state.searchTerm)
-               || c.symbol.toLowerCase().includes(state.searchTerm);
+    const match = c.name.toLowerCase().includes(state.searchTerm) || c.symbol.toLowerCase().includes(state.searchTerm);
     let ok = true;
     if (state.filterType === 'favorites') ok = state.favorites.includes(c.id);
     if (state.filterType === 'gainers')   ok = q.percent_change_24h > 0;
@@ -367,30 +436,61 @@ function filterAndSort() {
     switch (state.sortType) {
       case 'market_cap_desc': return qb.market_cap - qa.market_cap;
       case 'market_cap_asc':  return qa.market_cap - qb.market_cap;
-      case 'price_desc':      return qb.price - qa.price;
-      case 'price_asc':       return qa.price - qb.price;
-      case 'volume_desc':     return qb.volume_24h - qa.volume_24h;
-      case 'volume_asc':      return qa.volume_24h - qb.volume_24h;
-      case 'change_desc':     return qb.percent_change_24h - qa.percent_change_24h;
-      case 'change_asc':      return qa.percent_change_24h - qb.percent_change_24h;
-      default:                return qb.market_cap - qa.market_cap;
+      case 'price_desc': return qb.price - qa.price;
+      case 'price_asc': return qa.price - qb.price;
+      case 'volume_desc': return qb.volume_24h - qa.volume_24h;
+      case 'volume_asc': return qa.volume_24h - qb.volume_24h;
+      case 'change_desc': return qb.percent_change_24h - qa.percent_change_24h;
+      case 'change_asc': return qa.percent_change_24h - qb.percent_change_24h;
+      default: return qb.market_cap - qa.market_cap;
     }
   });
 }
 
+// Paginatie
 function updatePaginationInfo() {
   const total = Math.ceil(state.filteredCoins.length / state.itemsPerPage);
   pageInfo.textContent = `Pagina ${state.currentPage} van ${total || 1}`;
   prevPageButton.disabled = state.currentPage <= 1;
   nextPageButton.disabled = state.currentPage >= total;
 }
-function goToPrevPage() { if (state.currentPage > 1) { state.currentPage--; renderTable(); window.scrollTo(0,0);} }
-function goToNextPage() { const total = Math.ceil(state.filteredCoins.length/state.itemsPerPage); if (state.currentPage < total) { state.currentPage++; renderTable(); window.scrollTo(0,0);} }
-
-function showLoadingState() {
-  cryptoTableBody.innerHTML = `<tr class="loading-row"><td colspan="6" class="loading-message">Laden…</td></tr>`;
+function goToPrevPage() {
+  if (state.currentPage > 1) {
+    state.currentPage--;
+    renderTable();
+    window.scrollTo(0, 0);
+  }
 }
-function hideLoadingState() { /* overschreven bij render */ }
+function goToNextPage() {
+  const total = Math.ceil(state.filteredCoins.length / state.itemsPerPage);
+  if (state.currentPage < total) {
+    state.currentPage++;
+    renderTable();
+    window.scrollTo(0, 0);
+  }
+}
+
+// Laad en error
+function showLoadingState() {
+  cryptoTableBody.innerHTML = `<tr class="loading-row"><td colspan="6" class="loading-message">Cryptocurrency gegevens laden...</td></tr>`;
+}
+function hideLoadingState() { /* overschreven bij render */}
 function showErrorState(msg) {
   cryptoTableBody.innerHTML = `<tr class="error-row"><td colspan="6" class="error-message">${msg}<button onclick="window.location.reload()" class="retry-button">Opnieuw proberen</button></td></tr>`;
+}
+
+// Observer API
+const rowObserver = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('fade-in');
+      observer.unobserve(entry.target); // Stop observeren na eerste keer
+    }
+  });
+}, { threshold: 0.1 });
+
+function observeRows() {
+  document.querySelectorAll('.observe-fade:not(.fade-in)').forEach(row => {
+    rowObserver.observe(row);
+  });
 }

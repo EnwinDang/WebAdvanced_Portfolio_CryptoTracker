@@ -1,11 +1,9 @@
-// src/js/api.js
-
 class CoinPaprikaAPI {
   constructor() {
     this.baseUrl = 'https://api.coinpaprika.com/v1';
   }
 
-  // Helper: fetch + basic error handling
+  // Error handeling
   async _get(path) {
     const res = await fetch(`${this.baseUrl}${path}`);
     if (!res.ok) {
@@ -14,21 +12,21 @@ class CoinPaprikaAPI {
     return res.json();
   }
 
-  // 1. Muntenlijst (paginering)
+  //Coin lijst
   async fetchCoinsList(page = 1, perPage = 100) {
     const offset = (page - 1) * perPage;
     const json = await this._get(`/tickers?quotes=EUR&limit=${perPage}&start=${offset}`);
-    return json; // array van ticker-objecten
+    return json; 
   }
 
-  // 2. Globale marktgegevens
+  //Marktgegevens
   async fetchGlobalData() {
     const json = await this._get(`/global`);
     return json; 
     // object bevat: market_cap_usd, volume_24h_usd, bitcoin_dominance_percentage, cryptocurrencies_count, etc.
   }
 
-  // 3. Details van één munt
+  //Details coin
   async fetchCoinDetails(coinId) {
     const coinJson   = await this._get(`/coins/${coinId}`);
     const tickerJson = await this._get(`/tickers/${coinId}?quotes=EUR`);
@@ -46,29 +44,27 @@ class CoinPaprikaAPI {
     };
   }
 
-  // 4. Marktgrafiek via Binance (gratis, CORS OK)
+  //Marktgrafiek via Binance
   async fetchCoinMarketChart(coinSymbol, days = 7) {
     try {
-      // Binance verwacht symbol as e.g. 'BTCUSDT'
       const pair = `${coinSymbol.toUpperCase()}USDT`;
-      const limit = days; // daily bars
+      const limit = days;
       const res = await fetch(
         `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1d&limit=${limit}`
       );
       if (!res.ok) throw new Error(`API fout: ${res.status}`);
       const raw = await res.json();
-      // raw: [ [ openTime, open, high, low, close, volume, ... ], ... ]
       return raw.map(item => ({
         time_close:  item[0],
         price_close: parseFloat(item[4])
       }));
     } catch (err) {
       console.warn('Binance chart-error:', err);
-      return [];  // signal “no data”
+      return [];  // error handeling
     }
   }
 
-  // 5. Favorieten: haal eerste 1000 en filter
+  //Favorieten, filter
   async fetchFavoriteCoins(favoriteIds) {
     if (!favoriteIds || favoriteIds.length === 0) return [];
     const all = await this.fetchCoinsList(1, 1000);

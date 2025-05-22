@@ -1,5 +1,4 @@
-/**
- * Hulpfuncties voor formattering en gegevensverwerking
+/*Hulpfuncties voor formattering en gegevensverwerking
  */
 
 // Valuta waarden formatteren
@@ -48,7 +47,7 @@ export function debounce(func, delay) {
   };
 }
 
-// Datum formatteren voor grafiek labels
+// Datum formatteren voor grafiek
 export function formatDate(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleDateString('nl-NL', { month: 'short', day: 'numeric' });
@@ -78,12 +77,3 @@ export function getUrlParams() {
   return params;
 }
 
-// Willekeurige kleur genereren voor grafieken
-export function getRandomColor() {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-}

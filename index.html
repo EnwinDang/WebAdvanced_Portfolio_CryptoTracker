@@ -35,9 +35,9 @@
 
   <!-- Main Content -->
   <main class="container">
-    <!-- Home View -->
+    <!-- Home -->
     <div id="home-view" class="view">
-      <!-- Market Overview -->
+      <!-- Marktoverzicht -->
       <section class="market-overview">
         <h2>Marktoverzicht</h2>
         <div class="overview-cards">
@@ -60,7 +60,7 @@
         </div>
       </section>
 
-      <!-- Table Controls -->
+      <!-- Tabellen interacties -->
       <section class="table-controls">
         <div class="search-container">
           <input type="text" id="search-input" class="search-input" placeholder="Zoek cryptocurrency...">
@@ -87,7 +87,7 @@
         </div>
       </section>
 
-      <!-- Cryptocurrency Table -->
+      <!-- Cryptocurrency Tabel -->
       <section class="table-container">
         <table class="crypto-table">
           <thead>
@@ -101,7 +101,7 @@
             </tr>
           </thead>
           <tbody id="crypto-table-body">
-            <!-- Table rows will be dynamically inserted here -->
+            <!-- Tabel rijen worden hier dynamisch toegevoegd -->
             <tr class="loading-row">
               <td colspan="6" class="loading-message">Cryptocurrency gegevens laden...</td>
             </tr>
@@ -109,7 +109,7 @@
         </table>
       </section>
 
-      <!-- Pagination -->
+      <!-- Pagina's -->
       <div class="pagination">
         <button id="prev-page" class="pagination-button" disabled>Vorige</button>
         <span id="page-info" class="page-info">Pagina 1 van 1</span>
@@ -117,14 +117,14 @@
       </div>
     </div>
 
-    <!-- Favorites View -->
+    <!-- Favorieten -->
     <div id="favorites-view" class="view" style="display: none;">
       <section class="section-header">
         <h2>Jouw Favoriete Cryptocurrencies</h2>
         <p class="section-description">Volg en monitor je favoriete cryptocurrencies op één plek.</p>
       </section>
 
-      <!-- Favorites Table -->
+      <!-- Favorieten tabel -->
       <section class="table-container">
         <table class="crypto-table">
           <thead>
@@ -138,7 +138,7 @@
             </tr>
           </thead>
           <tbody id="favorites-table-body">
-            <!-- Favorite coins will be dynamically inserted here -->
+            <!-- Favorieten worden hier dynamisch toegevoegd -->
             <tr class="loading-row">
               <td colspan="6" class="loading-message">Je favoriete cryptocurrencies laden...</td>
             </tr>
@@ -146,7 +146,7 @@
         </table>
       </section>
 
-      <!-- No Favorites Message -->
+      <!-- Geen favorieten -->
       <div id="no-favorites-message" class="no-favorites-message" style="display: none;">
         <div class="message-content">
           <h3>Nog Geen Favorieten</h3>
@@ -157,7 +157,7 @@
       </div>
     </div>
 
-    <!-- Coin Detail View -->
+    <!-- Coin Detail -->
     <div id="coin-detail-view" class="view" style="display: none;">
       <div class="back-button-container">
         <button id="back-to-home" class="back-button">← Terug naar Lijst</button>
@@ -208,11 +208,12 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>Gemaakt door Nguyen Dang, met gebruik van <a href="https://www.coingecko.com/en/api" target="_blank">CoinGecko API</a></p>
+      <p>Gemaakt door Nguyen Dang, met gebruik van <a href="https://publicapi.dev/coinpaprika-api" target="_blank">CoinPaprikaAPI</a> en 
+                                                   <a href="https://www.binance.com/en/binance-api" target="_blank">BinanceAPI</a> </p>
     </div>
   </footer>
 
-  <!-- Scripts -->
+  <!-- Script -->
   <script type="module" src="src/js/main.js"></script>
 </body>
 </html>

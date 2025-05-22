@@ -101,7 +101,7 @@ button {
   font-family: 'Inter', sans-serif;
 }
 
-/* Header stijlen */
+/*Header stijlen */
 .header {
   background-color: var(--header-bg);
   padding: 1rem 0;
@@ -410,7 +410,7 @@ main {
   background-color: var(--button-hover);
 }
 
-/* Paginering stijlen */
+/* Paginatie stijlen */
 .pagination {
   display: flex;
   justify-content: center;
@@ -444,7 +444,7 @@ main {
   font-size: 0.875rem;
 }
 
-/* Munt detail stijlen */
+/* Coin detail stijlen */
 .back-button-container {
   margin-bottom: 1.5rem;
 }
@@ -628,7 +628,7 @@ main {
   }
 }
 
-/* Responsive stijlen */
+/* Responsive */
 @media (max-width: 768px) {
   .coin-detail-container {
     grid-template-columns: 1fr;
@@ -670,3 +670,14 @@ main {
     justify-content: flex-end;
   }
 }
+/*Observer*/
+.observe-fade {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
