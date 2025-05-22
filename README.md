@@ -120,22 +120,22 @@ CryptoTracker is een interactieve Single Page Application (SPA) waarmee je realt
 ---
 
 ## Folderstructuur
-/node_modules
-/public
-  └─ vite.svg
-/src
-  ├─ css
-  │   └─ style.css
-  └─ js
-      ├─ api.js
-      ├─ main.js
-      └─ utils.js
-.gitignore
-index.html
-package-lock.json
-package.json
-README.md
-vite.config.js
+/node_modules  
+/public  
+  └─ vite.svg  
+/src  
+  ├─ css  
+  │   └─ style.css  
+  └─ js  
+      ├─ api.js  
+      ├─ main.js  
+      └─ utils.js  
+.gitignore  
+index.html  
+package-lock.json  
+package.json  
+README.md  
+vite.config.js  
 
 
 ---
