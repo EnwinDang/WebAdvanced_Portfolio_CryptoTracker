@@ -1,7 +1,7 @@
 # CryptoTracker (Web Advanced Portfolio Project 2024-2025, Erasmus Hogeschool Brussel)
 
 **Student:** Enwin Dang  
-**Cursus:** Web Advanced (Dynamic Web)  
+**Cursus:** Web Advanced
 **Academiejaar:** 2024-2025
 
 ---
